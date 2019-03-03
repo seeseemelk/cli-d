@@ -1,0 +1,15 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/cli-d
+cli-d.so
+cli-d.dylib
+cli-d.dll
+cli-d.a
+cli-d.lib
+cli-d-test-*
+*.exe
+*.o
+*.obj
+*.lst

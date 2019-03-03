@@ -1,0 +1,6 @@
+name "cli-d"
+description "A library that allows super easy parsing of command line arguments"
+authors "Sebastiaan de Schaetzen"
+copyright "Copyright © 2019, Sebastiaan de Schaetzen"
+license "MIT"
+targetType "library"
