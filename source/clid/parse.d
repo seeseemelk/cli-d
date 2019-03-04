@@ -59,6 +59,11 @@ private C parse(C)(string[] args)
 		}
 	}
 
+	if (state.expectArgument)
+	{
+		stderr.writeln("Incomplete argument");
+		exit(1);
+	}
 	checkRequires(state);
 
 	return c;
@@ -217,10 +222,10 @@ unittest
 		@Required int required;
 
 		@Parameter("bool", 'b')
-		@Validate!isFile bool b;
+		bool b;
 	}
 
-	immutable Config config = parse!Config(["--foo", "a_string", "-b", "-n", "5"]);
+	immutable Config config = parse!Config(["--foo", "a_string", "-b", "-n", "5", "--req"]);
 	import std.stdio : writeln;
 
 	assert(config.value == "a_string", "String value not read from arguments");
