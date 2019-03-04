@@ -1,4 +1,4 @@
-module clid.basicattributes;
+module clid.attributes;
 
 /**
  * This attribute will mark a property as a command line argument.

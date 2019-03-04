@@ -6,8 +6,8 @@ import std.traits : FunctionTypeOf, Parameters;
 /**
  * Validates a command line argument.
  */
-bool Validate(alias f)(string arg, int n) @property
-		if (is(FunctionTypeOf!(f) == function) && is(Parameters!(f)[1] == int))
+bool Validate(alias f)(string arg, int n) @property // @suppress(dscanner.style.phobos_naming_convention)
+if (is(FunctionTypeOf!(f) == function) && is(Parameters!(f)[1] == int))
 {
 	return f(arg, n);
 }
@@ -15,8 +15,8 @@ bool Validate(alias f)(string arg, int n) @property
 /**
  * Validates a command line argument.
  */
-bool Validate(alias f)(string arg, string str) @property
-		if (is(FunctionTypeOf!(f) == function) && is(Parameters!(f)[1] == string))
+bool Validate(alias f)(string arg, string str) @property // @suppress(dscanner.style.phobos_naming_convention)
+if (is(FunctionTypeOf!(f) == function) && is(Parameters!(f)[1] == string))
 {
 	return f(arg, str);
 }

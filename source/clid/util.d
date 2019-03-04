@@ -2,10 +2,13 @@ module clid.util;
 
 import std.traits : hasUDA, getUDAs;
 
-import clid.basicattributes;
+import clid.attributes;
 import clid.validate;
 
-void ValidateStruct(C)()
+/**
+ * Checks if a given struct is a valid configuration struct.
+ */
+void validateStruct(C)()
 {
 	static assert(is(C == struct), "Configuration object must be a struct");
 	static foreach (member; __traits(allMembers, C))
@@ -20,26 +23,41 @@ void ValidateStruct(C)()
 	}
 }
 
+/**
+ * Wrapper around __traits(getMember, ...)
+ */
 template Value(C, alias m)
 {
 	alias Value = __traits(getMember, C, m);
 }
 
+/**
+ * Wrapper around __traits(getMember, ...)
+ */
 template Value(alias c, alias m)
 {
 	alias Value = __traits(getMember, c, m);
 }
 
+/**
+ * Wrapper around hasUDA!(...)
+ */
 template hasUDAV(C, alias m, T)
 {
 	alias hasUDAV = hasUDA!(Value!(C, m), T);
 }
 
+/**
+ * Wrapper around hasUDA!(...)
+ */
 template hasUDAV(C, alias m, alias t)
 {
 	alias hasUDAV = hasUDA!(Value!(C, m), t);
 }
 
+/**
+ * Wrapper around hasUDA!(...)
+ */
 template hasUDAV(alias c, alias m, alias t)
 {
 	alias hasUDAV = hasUDA!(Value!(c, m), t);

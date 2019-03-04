@@ -4,7 +4,7 @@ import std.traits : hasUDA, getUDAs;
 import std.meta : Alias;
 import std.string : leftJustify;
 
-import clid.basicattributes;
+import clid.attributes;
 import clid.util;
 
 /**
@@ -15,7 +15,7 @@ void printHelp(C)(C c)
 {
 	import std.stdio : stderr;
 
-	ValidateStruct!C();
+	validateStruct!C();
 	stderr.write(getHelp(c));
 }
 
