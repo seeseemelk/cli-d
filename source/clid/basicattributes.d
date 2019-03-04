@@ -5,31 +5,31 @@ module clid.basicattributes;
  */
 struct Parameter
 {
-    /** A single character flag. */
-    dchar shortName;
-    /** A multi-character flag. */
-    string longName;
+	/** A single character flag. */
+	dchar shortName;
+	/** A multi-character flag. */
+	string longName;
 
-    /**
+	/**
      * Params:
      *  longName = A larger string that will be used as a long flag. (e.g.: --flag)
      *  shortName = A single character that will be used as the short flag. (e.g.: -f)
      */
-    this(string longName, dchar shortName = ' ')
-    {
-        this.longName = longName;
-        this.shortName = shortName;
-    }
+	this(string longName, dchar shortName = ' ')
+	{
+		this.longName = longName;
+		this.shortName = shortName;
+	}
 
-    /**
+	/**
      * Checks if this parameter flag name equals a string.
      * Params:
      *  arg = The argument to check against.
      */
-    bool equals(string arg) immutable
-    {
-        return arg.length == 1 ? shortName == arg[0] : longName == arg;
-    }
+	bool equals(string arg) immutable
+	{
+		return arg.length == 1 ? shortName == arg[0] : longName == arg;
+	}
 }
 
 /**
@@ -37,43 +37,35 @@ struct Parameter
  */
 struct Description
 {
-    /**
+	/**
      * The description of the argument.
      */
-    string description;
+	string description;
 
-    /**
-     * Params: description = The description to give to this argument.
+	/**
+	 * A single word that describes the value of the option.
+	 * E.g.: for an options --time, the optionType could be "secs".
+	 * In the help file this would then be listed as:
+	 *    --time secs     The time that has passen
+	 */
+	string optionType;
+
+	/**
+     * Params:
+	 * 	description = The description to give to this argument.
+	 * 	optionType = The optionType to give to this argument.
      */
-    this(string description)
-    {
-        this.description = description;
-    }
+	this(string description, string optionType = "")
+	{
+		this.description = description;
+		this.optionType = optionType;
+	}
 }
 
-struct Validate(V)
+/**
+ * Marks that the given argument is required to be given.
+ */
+struct Required
 {
-    private bool function(int) validator;
 
-    this(bool function(int) validator)
-    {
-        this.validator = validator;
-    }
-
-    bool validate(V)(V v)
-    {
-        return validator(v);
-    }
 }
-/*
-class TestValidator(string) : Validator
-{
-    bool validate(string v)
-    {
-        import std.stdio : writeln;
-
-        writeln("Wow");
-        return false;
-    }
-}
-*/
