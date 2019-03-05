@@ -1,4 +1,4 @@
-#CLI.d
+# CLI.d
 `CLI.d` is a library that allows super easy, yet powerful parsing of command
 line arguments.
 It supports the following features:
