@@ -13,3 +13,5 @@ cli-d-test-*
 *.o
 *.obj
 *.lst
+*.a
+*.so
