@@ -6,9 +6,7 @@ import clid.parse;
 
 C parseArguments(C)(string[] args)
 {
-	auto config = parse!C(args);
-	validateConfig(config);
-	return config;
+	return parse!C(args);
 }
 
 C parseArguments(C)()

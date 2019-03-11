@@ -69,6 +69,7 @@ C parse(C)(string[] args)
 		exit(1);
 	}
 	checkRequires(state);
+	validateConfig(c);
 
 	return c;
 }
@@ -192,7 +193,7 @@ private void fail(string message)
  * and with the actual value given.
  * Params: c = The configuration struct to validate.
  */
-void validateConfig(C)(C c) // @suppress(dscanner.suspicious.unused_parameter)
+void validateConfig(C)(ref C c) // @suppress(dscanner.suspicious.unused_parameter)
 {
 	foreach (member; __traits(allMembers, C))
 	{
@@ -201,7 +202,15 @@ void validateConfig(C)(C c) // @suppress(dscanner.suspicious.unused_parameter)
 			Parameter parameter = getUDAs!(__traits(getMember, C, member), Parameter)[0];
 			foreach (uda; getUDAs!(__traits(getMember, C, member), Validate))
 			{
-				if (__traits(getMember, c, member) !is null)
+				static if (is(typeof(__traits(getMember, c, member)) == string))
+				{
+					if (__traits(getMember, c, member) !is null)
+					{
+						if (uda("--" ~ parameter.longName, __traits(getMember, c, member)) == false)
+							exit(1);
+					}
+				}
+				else
 				{
 					if (uda("--" ~ parameter.longName, __traits(getMember, c, member)) == false)
 						exit(1);
@@ -232,7 +241,9 @@ unittest
 		bool b;
 	}
 
-	immutable Config config = parse!Config(["--foo", "a_string", "-b", "-n", "5", "--req", "1"]);
+	immutable Config config = parse!Config([
+			"--foo", "a_string", "-b", "-n", "5", "--req", "1"
+			]);
 	import std.stdio : writeln;
 
 	assert(config.value == "a_string", "String value not read from arguments");
@@ -251,7 +262,9 @@ unittest
 		@Parameter("file", 'f') @Validate!doesNotExist string file;
 	}
 
-	immutable Config config = parse!Config(["-bf", "some-random-file-that-should-not-exist"]);
+	immutable Config config = parse!Config([
+			"-bf", "some-random-file-that-should-not-exist"
+			]);
 	config.validateConfig();
 	import std.stdio : writeln;
 
