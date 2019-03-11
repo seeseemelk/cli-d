@@ -78,3 +78,31 @@ bool doesNotExist(string arg, string str)
 	}
 	return true;
 }
+
+bool isPositive(string arg, int value)
+{
+	if (value < 0)
+	{
+		stderr.writeln("Argument " ~ arg ~ " must be positive");
+		return false;
+	}
+	return true;
+}
+
+bool isNegative(string arg, int value)
+{
+	if (value > 0)
+	{
+		stderr.writeln("Argument " ~ arg ~ " must be negative");
+		return false;
+	}
+	return true;
+}
+
+bool isPortNumber(string arg, int value)
+{
+	if (value > 0 && value < 65536)
+		return true;
+	stderr.writeln("Argument " ~ arg ~ " must be a port number within range of [1, 65535]");
+	return false;
+}
