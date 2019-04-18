@@ -1,13 +1,13 @@
-module clid.parse;
+module clid.core.parse;
 
 import std.stdio : writeln, stderr;
 import core.stdc.stdlib : exit;
 import std.traits : hasUDA, getUDAs, hasMember, getSymbolsByUDA;
 import std.conv : text;
 
+import clid.core.help;
+import clid.core.util;
 import clid.attributes;
-import clid.help;
-import clid.util;
 import clid.validate;
 
 alias StringConsumer = void delegate(string);
@@ -81,7 +81,7 @@ private void checkRequires(C)(ref ParseState!C state)
 	{
 		if (!mixin("state.requires." ~ member))
 		{
-			stderr.writeln("Missing required argument --" ~ getUDAs!(Value!(C,
+			stderr.writeln("Missing required argument --" ~ getUDAs!(value!(C,
 					member), Parameter)[0].longName);
 			failed = true;
 		}

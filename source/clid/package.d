@@ -1,8 +1,8 @@
 module clid;
 
 public import clid.attributes;
-import clid.help;
-import clid.parse;
+import clid.core.help;
+import clid.core.parse;
 
 C parseArguments(C)(string[] args)
 {

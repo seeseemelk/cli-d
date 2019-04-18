@@ -48,17 +48,17 @@ struct Description
 	 * In the help file this would then be listed as:
 	 *    --time secs     The time that has passed.
 	 */
-	string optionType;
+	string optionUnit;
 
 	/**
      * Params:
 	 * 	description = The description to give to this argument.
-	 * 	optionType = The optionType to give to this argument.
+	 * 	optionUnit = The optionType to give to this argument.
      */
-	this(string description, string optionType = "")
+	this(string description, string optionUnit = "")
 	{
 		this.description = description;
-		this.optionType = optionType;
+		this.optionUnit = optionUnit;
 	}
 }
 

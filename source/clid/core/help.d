@@ -1,11 +1,11 @@
-module clid.help;
+module clid.core.help;
 
 import std.traits : hasUDA, getUDAs;
 import std.meta : Alias;
 import std.string : leftJustify;
 
 import clid.attributes;
-import clid.util;
+import clid.core.util;
 
 /**
  * Print help information for a given configuration struct.
@@ -27,74 +27,85 @@ private string getHelp(C)(C c) // @suppress(dscanner.suspicious.unused_parameter
 
 	static foreach (member; __traits(allMembers, C))
 	{
-		str ~= Describe!(__traits(getMember, c, member)) ~ newline;
+		str ~= describe!(__traits(getMember, c, member)) ~ newline;
 	}
-	str ~= "\t-h, --help".leftJustify(30) ~ "Show this help\n";
+
+	static if (!hasShortParameter!(C)('h') && !hasLongParameter!C("help"))
+	{
+		str ~= "\t-h, --help".leftJustify(30) ~ "Show this help\n";
+	}
+	else static if (!hasShortParameter!C('h'))
+	{
+		str ~= "\t    --help".leftJustify(30) ~ "Show this help\n";
+	}
+	else static if (!hasLongParameter!C("help"))
+	{
+		str ~= "\t-h        ".leftJustify(30) ~ "Show this help\n";
+	}
 	return str;
 }
 
-private template GetFlagName(alias E)
+private template getFlagName(alias E)
 {
-	static assert(getUDAs!(E, Parameter).length == 1, "Must have at most 1 @Parameter attribute.");
-	static if (getUDAs!(E, Parameter)[0].shortName == ' ')
+	static if (getParameter!(E).shortName == ' ')
 	{
-		alias GetFlagName = Alias!("    --" ~ getUDAs!(E, Parameter)[0].longName);
+		alias getFlagName = Alias!("    --" ~ getParameter!(E).longName);
 	}
 	else
 	{
-		alias GetFlagName = Alias!("-" ~ getUDAs!(E,
-				Parameter)[0].shortName ~ ", --" ~ getUDAs!(E, Parameter)[0].longName);
+		alias getFlagName = Alias!("-" ~ getParameter!(E)
+				.shortName ~ ", --" ~ getParameter!(E).longName);
 	}
 }
 
-private template GetFlagValue(alias E)
+private template getFlagUnit(alias E)
 {
 	import std.uni : toUpper;
 
-	static if (hasUDA!(E, Description) && getUDAs!(E, Description)[0].optionType.length > 0)
+	static if (hasDescription!(E) && getDescription!(E).optionUnit.length > 0)
 	{
-		alias GetFlagValue = Alias!(" " ~ getUDAs!(E, Description)[0].optionType);
+		alias getFlagUnit = Alias!(" " ~ getDescription!(E).optionUnit);
 	}
 	else static if (is(typeof(E) : bool))
 	{
-		alias GetFlagValue = Alias!("");
+		alias getFlagUnit = Alias!("");
 	}
 	else
 	{
-		alias GetFlagValue = Alias!(" " ~ typeof(E).stringof.toUpper);
+		alias getFlagUnit = Alias!(" " ~ typeof(E).stringof.toUpper);
 	}
 }
 
-private template GetFlag(alias E)
+private template getFlag(alias E)
 {
-	alias GetFlag = Alias!(GetFlagName!(E) ~ GetFlagValue!(E));
+	alias getFlag = Alias!(getFlagName!(E) ~ getFlagUnit!(E));
 }
 
-private template GetDescriptionOnly(alias E)
+private template getOnlyDescription(alias E)
 {
-	static if (hasUDA!(E, Description))
-		alias GetDescriptionOnly = Alias!(getUDAs!(E, Description)[0].description);
+	static if (hasDescription!(E))
+		alias getOnlyDescription = Alias!(getDescription!(E).description);
 	else
-		alias GetDescriptionOnly = Alias!("");
+		alias getOnlyDescription = Alias!("");
 }
 
-private template GetDescription(alias E)
+private template getFullDescription(alias E)
 {
 	static if (hasUDA!(E, Required))
-		alias GetDescription = Alias!("[REQUIRED] " ~ GetDescriptionOnly!(E));
+		alias getFullDescription = Alias!("[REQUIRED] " ~ getOnlyDescription!(E));
 	else
-		alias GetDescription = GetDescriptionOnly!(E);
+		alias getFullDescription = getOnlyDescription!(E);
 }
 
-private template Describe(alias E)
+private template describe(alias E)
 {
 	static if (!hasUDA!(E, Description) && !hasUDA!(E, Required))
 	{
-		alias Describe = Alias!('\t' ~ GetFlag!(E));
+		alias describe = Alias!('\t' ~ getFlag!(E));
 	}
 	else
 	{
-		alias Describe = Alias!(leftJustify('\t' ~ GetFlag!(E), 30) ~ GetDescription!(E));
+		alias describe = Alias!(leftJustify('\t' ~ getFlag!(E), 30) ~ getFullDescription!(E));
 	}
 }
 
@@ -131,8 +142,8 @@ unittest
 	}
 
 	immutable Config config;
-	static assert(GetFlag!(config.value) == "-f, --foo INT");
-	static assert(GetDescription!(config.value) == "Foobar");
+	static assert(getFlag!(config.value) == "-f, --foo INT");
+	static assert(getFullDescription!(config.value) == "Foobar");
 
 	printHelp(config);
 }
@@ -146,6 +157,5 @@ unittest
 	}
 
 	immutable Config config;
-	static assert(GetFlag!(config.value) == "    --foo INT");
-	//static assert(Describe!(config.value) == "\t    --foo INT");
+	static assert(getFlag!(config.value) == "    --foo INT");
 }

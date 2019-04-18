@@ -1,6 +1,7 @@
-module clid.util;
+module clid.core.util;
 
 import std.traits : hasUDA, getUDAs;
+import std.meta : Alias;
 
 import clid.attributes;
 import clid.validate;
@@ -26,17 +27,17 @@ void validateStruct(C)()
 /**
  * Wrapper around __traits(getMember, ...)
  */
-template Value(C, alias m)
+template value(C, alias m)
 {
-	alias Value = __traits(getMember, C, m);
+	alias value = __traits(getMember, C, m);
 }
 
 /**
  * Wrapper around __traits(getMember, ...)
  */
-template Value(alias c, alias m)
+template value(alias c, alias m)
 {
-	alias Value = __traits(getMember, c, m);
+	alias value = __traits(getMember, c, m);
 }
 
 /**
@@ -44,7 +45,7 @@ template Value(alias c, alias m)
  */
 template hasUDAV(C, alias m, T)
 {
-	alias hasUDAV = hasUDA!(Value!(C, m), T);
+	alias hasUDAV = hasUDA!(value!(C, m), T);
 }
 
 /**
@@ -52,7 +53,7 @@ template hasUDAV(C, alias m, T)
  */
 template hasUDAV(C, alias m, alias t)
 {
-	alias hasUDAV = hasUDA!(Value!(C, m), t);
+	alias hasUDAV = hasUDA!(value!(C, m), t);
 }
 
 /**
@@ -60,5 +61,86 @@ template hasUDAV(C, alias m, alias t)
  */
 template hasUDAV(alias c, alias m, alias t)
 {
-	alias hasUDAV = hasUDA!(Value!(c, m), t);
+	alias hasUDAV = hasUDA!(value!(c, m), t);
+}
+
+/**
+ * Checks if given template has a parameter attribute.
+ */
+template hasParameter(alias E)
+{
+	alias hasParameter = Alias!(hasUDA!(E, Parameter));
+}
+
+/**
+ * Checks if given template has a parameter attribute.
+ */
+template hasParameter(C, alias E)
+{
+	alias hasParameter = Alias!(hasUDA!(value!(C, E), Parameter));
+}
+
+/**
+ * Checks if the given struct has a short parameter.
+ * Params:
+ *  parameter The short flag that the parameter should have.
+ */
+bool hasShortParameter(C)(dchar parameter)
+{
+	static foreach (member; __traits(allMembers, C))
+	{
+		static if (hasParameter!(member) && getParameter!(member).shortName == parameter)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Checks if the given struct has a long parameter.
+ * Params:
+ *  parameter The long flag that the parameter should have.
+ */
+bool hasLongParameter(C)(string parameter)
+{
+	static foreach (member; __traits(allMembers, C))
+	{
+		if (hasParameter!(C, member) && getParameter!(C, member).longName == parameter)
+			return true;
+	}
+	return false;
+}
+
+/**
+ * Gets the parameter attribute connected to an element.
+ */
+template getParameter(alias E)
+{
+	alias getParameter = Alias!(getUDAs!(E, Parameter)[0]);
+}
+
+/**
+ * Gets the parameter attribute connected to an element.
+ */
+template getParameter(C, alias E)
+{
+	alias getParameter = Alias!(getUDAs!(value!(C, E), Parameter)[0]);
+}
+
+/**
+ * Checks if the element has a description attribute.
+ */
+template hasDescription(alias E)
+{
+	alias hasDescription = Alias!(hasUDA!(E, Description));
+}
+
+/**
+ * Gets the description attribute of an element.
+ */
+template getDescription(alias E)
+{
+	alias getDescription = Alias!(getUDAs!(E, Description)[0]);
 }
