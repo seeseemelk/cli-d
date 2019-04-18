@@ -3,6 +3,7 @@ module clid.core.help;
 import std.traits : hasUDA, getUDAs;
 import std.meta : Alias;
 import std.string : leftJustify;
+import std.uni : toUpper;
 
 import clid.attributes;
 import clid.core.util;
@@ -23,24 +24,36 @@ private string getHelp(C)(C c) // @suppress(dscanner.suspicious.unused_parameter
 {
 	import std.ascii : newline;
 
-	string str = usage() ~ newline ~ newline;
+	string str = usage!C() ~ newline;
 
-	static foreach (member; __traits(allMembers, C))
+	if (hasUnnamedParameters!C)
 	{
-		str ~= describe!(__traits(getMember, c, member)) ~ newline;
+		str ~= newline ~ "Arguments:" ~ newline;
 	}
 
-	static if (!hasShortParameter!(C)('h') && !hasLongParameter!C("help"))
+	if (hasNamedParameters!C)
 	{
-		str ~= "\t-h, --help".leftJustify(30) ~ "Show this help\n";
-	}
-	else static if (!hasShortParameter!C('h'))
-	{
-		str ~= "\t    --help".leftJustify(30) ~ "Show this help\n";
-	}
-	else static if (!hasLongParameter!C("help"))
-	{
-		str ~= "\t-h        ".leftJustify(30) ~ "Show this help\n";
+		str ~= newline ~ "Options:" ~ newline;
+		static foreach (member; __traits(allMembers, C))
+		{
+			static if (isNamedParameter!(C, member))
+			{
+				str ~= describe!(value!(C, member)) ~ newline;
+			}
+		}
+
+		static if (!hasShortParameter!(C)('h') && !hasLongParameter!C("help"))
+		{
+			str ~= "\t-h, --help".leftJustify(30) ~ "Show this help\n";
+		}
+		else static if (!hasLongParameter!C("help"))
+		{
+			str ~= "\t    --help".leftJustify(30) ~ "Show this help\n";
+		}
+		else static if (!hasShortParameter!C('h'))
+		{
+			str ~= "\t-h        ".leftJustify(30) ~ "Show this help\n";
+		}
 	}
 	return str;
 }
@@ -58,13 +71,11 @@ private template getFlagName(alias E)
 	}
 }
 
-private template getFlagUnit(alias E)
+private template getFlagUnit(alias E, string prefix = " ")
 {
-	import std.uni : toUpper;
-
 	static if (hasDescription!(E) && getDescription!(E).optionUnit.length > 0)
 	{
-		alias getFlagUnit = Alias!(" " ~ getDescription!(E).optionUnit);
+		alias getFlagUnit = Alias!(prefix ~ getDescription!(E).optionUnit);
 	}
 	else static if (is(typeof(E) : bool))
 	{
@@ -72,7 +83,7 @@ private template getFlagUnit(alias E)
 	}
 	else
 	{
-		alias getFlagUnit = Alias!(" " ~ typeof(E).stringof.toUpper);
+		alias getFlagUnit = Alias!(prefix ~ typeof(E).stringof.toUpper);
 	}
 }
 
@@ -109,11 +120,49 @@ private template describe(alias E)
 	}
 }
 
-private string usage()
+private string usage(C)()
 {
 	import core.runtime : Runtime;
 
-	return "Usage: " ~ Runtime.args()[0] ~ " [OPTION...]";
+	return "Usage: " ~ Runtime.args()[0] ~ " [OPTION]..." ~ getRequiredUsage!C()
+		~ getUnnamedUsage!C();
+}
+
+private string getUnnamedUsage(C)()
+{
+	string str;
+
+	static foreach (member; __traits(allMembers, C))
+	{
+		static if (!isNamedParameter!(C, member))
+		{
+			static if (isRequired!(C, member))
+			{
+				str ~= getFlagUnit!(value!(C, member)).toUpper;
+			}
+			else
+			{
+				str ~= getFlagUnit!(value!(C, member), " [").toUpper ~ "]";
+			}
+		}
+	}
+	return str;
+}
+
+private string getRequiredUsage(C)()
+{
+	string str;
+
+	static foreach (member; __traits(allMembers, C))
+	{
+		static if (isRequired!(C, member))
+		{
+			str ~= " --" ~ getParameter!(value!(C, member))
+				.longName ~ getFlagUnit!(value!(C, member)).toUpper;
+		}
+	}
+
+	return str;
 }
 
 // ======================
@@ -134,11 +183,13 @@ unittest
 
 		@Parameter("time", 't')
 		@Description("Interval time", "secs")
-		int time;
+		@Required int time;
 
 		@Parameter("bar")
 		@Description("A random description")
 		@Required bool other;
+
+		@Parameter() string something;
 	}
 
 	immutable Config config;

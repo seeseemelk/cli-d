@@ -1,7 +1,7 @@
 module clid.core.util;
 
 import std.traits : hasUDA, getUDAs;
-import std.meta : Alias;
+import std.meta : Alias, anySatisfy;
 
 import clid.attributes;
 import clid.validate;
@@ -124,9 +124,9 @@ template getParameter(alias E)
 /**
  * Gets the parameter attribute connected to an element.
  */
-template getParameter(C, alias E)
+template getParameter(C, alias e)
 {
-	alias getParameter = Alias!(getUDAs!(value!(C, E), Parameter)[0]);
+	alias getParameter = Alias!(getUDAs!(value!(C, e), Parameter)[0]);
 }
 
 /**
@@ -144,3 +144,70 @@ template getDescription(alias E)
 {
 	alias getDescription = Alias!(getUDAs!(E, Description)[0]);
 }
+
+/**
+ * Checks if a given parameter is required.
+ */
+template isRequired(alias E)
+{
+	alias isRequired = Alias!(hasUDA!(E, Required));
+}
+
+/**
+ * Checks if a given parameter is required.
+ */
+template isRequired(C, alias e)
+{
+	alias isRequired = Alias!(isRequired!(value!(C, e)));
+}
+
+/**
+ * Checks if a given parameter is a named parameter.
+ */
+template isNamedParameter(alias e)
+{
+	alias isNamedParameter = Alias!(getParameter!(e).longName.length > 0);
+}
+
+/**
+ * Checks if a given parameter is a named parameter.
+ */
+template isNamedParameter(alias C, alias e)
+{
+	alias isNamedParameter = isNamedParameter!(value!(C, e));
+}
+
+private template hasNamedParameters(C, members...)
+{
+	static if (isNamedParameter!(C, members[0]))
+		alias hasNamedParameters = Alias!true;
+	else static if (members.length == 1)
+		alias hasNamedParameters = isNamedParameter!(C, members[0]);
+	else
+		alias hasNamedParameters = hasNamedParameters!(C, members[1 .. $]);
+}
+
+private template hasNamedParameters(C, member)
+{
+	alias hasNamedParameters = isNamedParameter!(C, members[i]);
+}
+
+/**
+ * Checks if the struct has a named parameter.
+ */
+alias hasNamedParameters(C) = hasNamedParameters!(C, __traits(allMembers, C));
+
+private template hasUnnamedParameters(C, members...)
+{
+	static if (!isNamedParameter!(C, members[0]))
+		alias hasUnnamedParameters = Alias!true;
+	else static if (members.length == 1)
+		alias hasUnnamedParameters = Alias!(!isNamedParameter!(C, members[0]));
+	else
+		alias hasUnnamedParameters = hasUnnamedParameters!(C, members[1 .. $]);
+}
+
+/**
+ * Checks if the struct has an unamed parameter.
+ */
+alias hasUnnamedParameters(C) = hasUnnamedParameters!(C, __traits(allMembers, C));
