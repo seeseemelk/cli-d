@@ -36,10 +36,10 @@ bool isNotEmpty(string arg, string str)
 
 unittest
 {
-    assert(isNotEmpty("--arg", "") == false);
-    assert(isNotEmpty("--arg", null) == false);
-    assert(isNotEmpty("--arg", "wow") == true);
-    assert(isNotEmpty("--arg", " ") == true);
+	assert(isNotEmpty("--arg", "") == false);
+	assert(isNotEmpty("--arg", null) == false);
+	assert(isNotEmpty("--arg", "wow") == true);
+	assert(isNotEmpty("--arg", " ") == true);
 }
 
 /**
@@ -87,6 +87,9 @@ bool doesNotExist(string arg, string str)
 	return true;
 }
 
+/**
+ * Makes sure a given argument is a positive number (n >= 0).
+ */
 bool isPositive(string arg, int value)
 {
 	if (value < 0)
@@ -97,6 +100,16 @@ bool isPositive(string arg, int value)
 	return true;
 }
 
+unittest
+{
+	assert(isPositive("--arg", 1) == true);
+	assert(isPositive("--arg", 0) == true);
+	assert(isPositive("--arg", -1) == false);
+}
+
+/**
+ * Makes sure a given argument is a negative number (n <= 0).
+ */
 bool isNegative(string arg, int value)
 {
 	if (value > 0)
@@ -107,10 +120,28 @@ bool isNegative(string arg, int value)
 	return true;
 }
 
+unittest
+{
+	assert(isNegative("--arg", 1) == false);
+	assert(isNegative("--arg", 0) == true);
+	assert(isNegative("--arg", -1) == true);
+}
+
+/**
+ * Checks that a given argument is a valid port number (n > 0 && n < 65536).
+ */
 bool isPortNumber(string arg, int value)
 {
-	if (value > 0 && value < 65536)
+	if (value > 0 && value <= 0xFFFF)
 		return true;
 	stderr.writeln("Argument " ~ arg ~ " must be a port number within range of [1, 65535]");
 	return false;
+}
+
+unittest
+{
+	assert(isPortNumber("--arg", 1) == true);
+	assert(isPortNumber("--arg", 0xFFFF) == true);
+	assert(isPortNumber("--arg", 0) == false);
+	assert(isPortNumber("--arg", 0x10000) == false);
 }
