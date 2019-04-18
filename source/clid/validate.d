@@ -34,6 +34,14 @@ bool isNotEmpty(string arg, string str)
 	return true;
 }
 
+unittest
+{
+    assert(isNotEmpty("--arg", "") == false);
+    assert(isNotEmpty("--arg", null) == false);
+    assert(isNotEmpty("--arg", "wow") == true);
+    assert(isNotEmpty("--arg", " ") == true);
+}
+
 /**
  * Validates that argument refers to a valid file.
  */
