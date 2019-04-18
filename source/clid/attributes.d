@@ -46,7 +46,7 @@ struct Description
 	 * A single word that describes the value of the option.
 	 * E.g.: for an options --time, the optionType could be "secs".
 	 * In the help file this would then be listed as:
-	 *    --time secs     The time that has passen
+	 *    --time secs     The time that has passed.
 	 */
 	string optionType;
 
