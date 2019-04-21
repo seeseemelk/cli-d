@@ -4,6 +4,7 @@ import std.stdio : writeln, stderr;
 import core.stdc.stdlib : exit;
 import std.traits : hasUDA, getUDAs, hasMember, getSymbolsByUDA;
 import std.conv : text;
+import std.typecons : Nullable;
 
 import clid.core.help;
 import clid.core.util;
@@ -11,14 +12,6 @@ import clid.attributes;
 import clid.validate;
 
 alias StringConsumer = void delegate(string);
-
-/*
-private struct ParseState
-{
-	bool expectArgument = false;
-	StringConsumer argumentConsumer = null;
-}
-*/
 
 private struct ParseState(C)
 {
@@ -39,7 +32,7 @@ private mixin template RequireStruct(C)
  * Parses a range of arguments.
  * Params: args = The arguments to parse.
  */
-C parse(C)(string[] args)
+Nullable!C parse(C)(string[] args)
 {
 	validateStruct!C();
 	C c;
@@ -55,7 +48,7 @@ C parse(C)(string[] args)
 		else if (arg == "-h" || arg == "--help")
 		{
 			printHelp(c);
-			exit(0);
+			return Nullable!C();
 		}
 		else
 		{
@@ -66,15 +59,15 @@ C parse(C)(string[] args)
 	if (state.expectArgument)
 	{
 		stderr.writeln("Incomplete argument");
-		exit(1);
+		return Nullable!C();
 	}
 	checkRequires(state);
 	validateConfig(c);
 
-	return c;
+	return Nullable!C(c);
 }
 
-private void checkRequires(C)(ref ParseState!C state)
+private bool checkRequires(C)(ref ParseState!C state)
 {
 	bool failed = false;
 	static foreach (member; __traits(allMembers, state.requires))
@@ -86,31 +79,31 @@ private void checkRequires(C)(ref ParseState!C state)
 			failed = true;
 		}
 	}
-	if (failed)
-		exit(1);
+	return !failed;
 }
 
-private void parseArgument(C)(ref ParseState!C state, ref C c, string arg)
+private bool parseArgument(C)(ref ParseState!C state, ref C c, string arg)
 {
 	if (arg.length < 2)
-		fail("Malformed argument '" ~ arg ~ "'");
+		return fail("Malformed argument '" ~ arg ~ "'");
 	else if (arg[0] == '-' && arg[1] != '-')
 	{
 		foreach (flag; arg[1 .. $ - 1])
 		{
-			parseShortArgument(state, c, flag);
+			if (!parseShortArgument(state, c, flag))
+				return false;
 		}
-		parseShortArgument(state, c, arg[$ - 1], true);
+		return parseShortArgument(state, c, arg[$ - 1], true);
 	}
 	else if (arg.length >= 3 && arg[0] == '-' && arg[1] == '-')
 	{
-		parseLongArgument(state, c, arg[2 .. $]);
+		return parseLongArgument(state, c, arg[2 .. $]);
 	}
 	else
-		fail("Malformed argument '" ~ arg ~ "'");
+		return fail("Malformed argument '" ~ arg ~ "'");
 }
 
-private void parseShortArgument(C)(ref ParseState!C state, ref C c, dchar flag,
+private bool parseShortArgument(C)(ref ParseState!C state, ref C c, dchar flag,
 		immutable bool allowArgs = false)
 {
 	foreach (member; __traits(allMembers, C))
@@ -122,7 +115,7 @@ private void parseShortArgument(C)(ref ParseState!C state, ref C c, dchar flag,
 				static if (is(typeof(__traits(getMember, c, member)) == bool))
 				{
 					__traits(getMember, c, member) = true;
-					return;
+					return true;
 				}
 				else
 				{
@@ -137,18 +130,18 @@ private void parseShortArgument(C)(ref ParseState!C state, ref C c, dchar flag,
 							__traits(getMember, c, member) = to!(typeof(__traits(getMember,
 									c, member)))(value);
 						};
-						return;
+						return true;
 					}
 					else
-						fail("Illegal argument " ~ flag.text);
+						return fail("Illegal argument " ~ flag.text);
 				}
 			}
 		}
 	}
-	fail("Unkown argument " ~ flag.text);
+	return fail("Unkown argument " ~ flag.text);
 }
 
-private void parseLongArgument(C)(ref ParseState!C state, ref C c, string arg)
+private bool parseLongArgument(C)(ref ParseState!C state, ref C c, string arg)
 {
 	foreach (member; __traits(allMembers, C))
 	{
@@ -159,7 +152,7 @@ private void parseLongArgument(C)(ref ParseState!C state, ref C c, string arg)
 				static if (is(typeof(__traits(getMember, c, member)) == bool))
 				{
 					__traits(getMember, c, member) = true;
-					return;
+					return true;
 				}
 				else
 				{
@@ -172,18 +165,18 @@ private void parseLongArgument(C)(ref ParseState!C state, ref C c, string arg)
 						__traits(getMember, c, member) = to!(typeof(__traits(getMember, c, member)))(
 								value);
 					};
-					return;
+					return true;
 				}
 			}
 		}
 	}
-	fail("Illegal argument " ~ arg);
+	return fail("Illegal argument " ~ arg);
 }
 
-private void fail(string message)
+private bool fail(string message)
 {
-	writeln(message);
-	exit(1);
+	stderr.writeln(message);
+	return false;
 }
 
 /**
@@ -193,7 +186,7 @@ private void fail(string message)
  * and with the actual value given.
  * Params: c = The configuration struct to validate.
  */
-void validateConfig(C)(ref C c) // @suppress(dscanner.suspicious.unused_parameter)
+bool validateConfig(C)(ref C c) // @suppress(dscanner.suspicious.unused_parameter)
 {
 	foreach (member; __traits(allMembers, C))
 	{
@@ -207,17 +200,18 @@ void validateConfig(C)(ref C c) // @suppress(dscanner.suspicious.unused_paramete
 					if (__traits(getMember, c, member) !is null)
 					{
 						if (uda("--" ~ parameter.longName, __traits(getMember, c, member)) == false)
-							exit(1);
+							return false;
 					}
 				}
 				else
 				{
 					if (uda("--" ~ parameter.longName, __traits(getMember, c, member)) == false)
-						exit(1);
+						return false;
 				}
 			}
 		}
 	}
+	return true
 }
 
 // ======================
