@@ -177,6 +177,14 @@ template isNamedParameter(alias C, alias e)
 	alias isNamedParameter = isNamedParameter!(value!(C, e));
 }
 
+/**
+ * Checks if a given parameter is an unnamed parameter.
+ */
+template isUnnamedParameter(alias C, alias e)
+{
+	alias isUnnamedParameter = Alias!(hasParameter!(value!(C, e)) && !isNamedParameter!(C, e));
+}
+
 private template hasNamedParameters(C, members...)
 {
 	static if (isNamedParameter!(C, members[0]))
@@ -211,3 +219,12 @@ private template hasUnnamedParameters(C, members...)
  * Checks if the struct has an unamed parameter.
  */
 alias hasUnnamedParameters(C) = hasUnnamedParameters!(C, __traits(allMembers, C));
+
+/*
+private template getUnnamedParameters(C)
+{
+	import std.algorithm.iteration : filter;
+
+	alias getUnnamedParameters = Alias!(__traits(allMembers, C).filter!(b => !isNamedParameter(b)));
+}
+*/

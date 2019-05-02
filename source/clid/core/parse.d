@@ -3,8 +3,9 @@ module clid.core.parse;
 import std.stdio : writeln, stderr;
 import core.stdc.stdlib : exit;
 import std.traits : hasUDA, getUDAs, hasMember, getSymbolsByUDA;
-import std.conv : text;
+import std.conv : text, to;
 import std.typecons : Nullable;
+import std.meta : Alias, AliasSeq;
 
 import clid.core.help;
 import clid.core.util;
@@ -17,6 +18,7 @@ private struct ParseState(C)
 {
 	bool expectArgument = false;
 	StringConsumer argumentConsumer = null;
+	int namelessIndex = 0;
 	mixin RequireStruct!C requires;
 }
 
@@ -83,8 +85,11 @@ private bool checkRequires(C)(ref ParseState!C state)
 }
 
 private bool parseArgument(C)(ref ParseState!C state, ref C c, string arg)
+in(arg.length > 0, "Cannot parse empty argument")
 {
-	if (arg.length < 2)
+	if (arg[0] != '-')
+		return parseUnnamedArgument(state, c, arg);
+	else if (arg.length < 2)
 		return fail("Malformed argument '" ~ arg ~ "'");
 	else if (arg[0] == '-' && arg[1] != '-')
 	{
@@ -156,8 +161,6 @@ private bool parseLongArgument(C)(ref ParseState!C state, ref C c, string arg)
 				}
 				else
 				{
-					import std.conv : to;
-
 					state.expectArgument = true;
 					state.argumentConsumer = (value) {
 						static if (hasUDAV!(c, member, Required))
@@ -171,6 +174,47 @@ private bool parseLongArgument(C)(ref ParseState!C state, ref C c, string arg)
 		}
 	}
 	return fail("Illegal argument " ~ arg);
+}
+
+private bool parseUnnamedArgument(C)(ref ParseState!C state, ref C c, string arg)
+{
+	auto setters = getSetters!C;
+
+	setters[state.namelessIndex++](c, arg);
+	return false;
+}
+
+private auto getSetters(C)()
+{
+	void function(ref C, string)[getUnnamedMembers!(C).length] setters;
+	static foreach (i, member; getUnnamedMembers!(C))
+	{
+		setters[i] = function(ref C c, string arg) {
+			mixin("c." ~ member ~ " = arg;");
+		};
+	}
+	return setters;
+}
+
+private template getUnnamedMembers(C)
+{
+	alias getUnnamedMembers = getUnnamedMembersIn!(C, __traits(allMembers, C));
+}
+
+private template getUnnamedMembersIn(C, members...)
+{
+	static if (isUnnamedParameter!(C, members[0]))
+	{
+		static if (members.length == 1)
+			alias getUnnamedMembersIn = AliasSeq!(members[0]);
+		else
+			alias getUnnamedMembersIn = AliasSeq!(members[0],
+					getUnnamedMembersIn!(C, members[1 .. $]));
+	}
+	else static if (members.length == 1)
+		alias getUnnamedMembersIn = AliasSeq!();
+	else
+		alias getUnnamedMembersIn = getUnnamedMembersIn!(C, members[1 .. $]);
 }
 
 private bool fail(string message)
@@ -211,7 +255,7 @@ bool validateConfig(C)(ref C c) // @suppress(dscanner.suspicious.unused_paramete
 			}
 		}
 	}
-	return true
+	return true;
 }
 
 // ======================
@@ -238,7 +282,6 @@ unittest
 	immutable Config config = parse!Config([
 			"--foo", "a_string", "-b", "-n", "5", "--req", "1"
 			]);
-	import std.stdio : writeln;
 
 	assert(config.value == "a_string", "String value not read from arguments");
 	assert(config.number == 5, "Integer value not read from arguments");
@@ -260,9 +303,41 @@ unittest
 			"-bf", "some-random-file-that-should-not-exist"
 			]);
 	config.validateConfig();
-	import std.stdio : writeln;
 
 	assert(config.file == "some-random-file-that-should-not-exist",
 			"String not read from arguments");
 	assert(config.b == true, "Bool not set from arguments");
+}
+
+unittest
+{
+	struct Config
+	{
+		@Parameter() string file;
+	}
+
+	immutable config = parse!Config(["arg"]);
+
+	assert(config.file == "arg");
+}
+
+unittest
+{
+	struct Config
+	{
+		@Parameter() string unnamed;
+	}
+
+	assert(isUnnamedParameter!(Config, "unnamed") == true, "Parameter is unnamed");
+}
+
+unittest
+{
+	struct Config
+	{
+		@Parameter("named") string named;
+		@Parameter() string unnamed;
+	}
+
+	assert(getUnnamedMembers!(Config) == AliasSeq!("unnamed"), "Did not find unnamed parameters");
 }
